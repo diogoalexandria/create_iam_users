@@ -1,7 +1,8 @@
 import sys
 import boto3
 from args import args_parser
-
+from account import get_account
+from keeper_secrets_manager_core import SecretsManager
 def main(command, params):
     if command == "--help" or command == "-h":
         print(" - You can use the command 'create-app-user'")
@@ -54,23 +55,28 @@ def main(command, params):
                         UserName=user_name
                     )
                     if access_key_response["ResponseMetadata"]["HTTPStatusCode"] == 200:
-                        print(" - Create access key: ok\n")
+                        print(" - Create access key: ok")
 
                     access_key_id = access_key_response["AccessKey"]["AccessKeyId"]
-                    secret_access_key = access_key_response["AccessKey"]["SecretAccessKey"]
-
-                    
+                    secret_access_key = access_key_response["AccessKey"]["SecretAccessKey"]                    
                 
                     if params_dict["policy"]:
-                        policy_arn = f'arn:aws:iam::aws:policy/{params_dict["policy"]}'
-                        response = client.attach_user_policy(
-                            UserName=user_name,
-                            PolicyArn=policy_arn
-                        )
+                        try:
+                            policy_arn = f'arn:aws:iam::{get_account()}:policy/{params_dict["policy"]}'
+                            response = client.attach_user_policy(
+                                UserName=user_name,
+                                PolicyArn=policy_arn
+                            )
+                            print(" - Policy attach: ok")
+                        except Exception as excpetion:
+                            print("Something went wrong trying attach policy")
+                            print(f'Arn tried: {policy_arn}')
+                            print(f'Exception: {excpetion}')
+                            pass
                     else:
                         print(" - No policy was passed\n")
 
-                    print(f' - Access key id: {access_key_id}')
+                    print(f'\n - Access key id: {access_key_id}')
                     print(f' - Secret Access key: {secret_access_key}')
 
                 except client.exceptions.EntityAlreadyExistsException:
